@@ -1,5 +1,8 @@
 #!/bin/sh
 
+#Author: Abhilash26
+#License: GNU Public
+
 # Should the script try to open browser with the link?
 OPENBROWSER=1
 # devour is my personal window swallower program
