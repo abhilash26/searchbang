@@ -1,0 +1,85 @@
+#!/bin/sh
+
+# Should the script try to open browser with the link?
+OPENBROWSER=1
+# devour is my personal window swallower program
+BROWSER="firefox"
+
+# Use rofi dmenu or fzf as menu 
+# accepts  1 for "rofi" or 2 for "dmenu" 3 for "fzf"
+MENU=3 
+
+# bang file location with all info
+BANG_FILE_LOCATION="bang.js"
+
+# GET BANG List from file
+getbang() {
+   printf '%s' "$(jq '.[] | "[\(.c)] \(.d) \(.t)"' $1 | sed 's/\"//g')" 
+}
+
+# Get Desired Menu
+menu() {
+ case $MENU in
+ 1)
+ 	rofi -dmenu -l 10 -p "$1"
+ ;;
+ 2)
+ 	dmenu -l 10 -p "$1"
+ ;;
+ 3)
+    fzf -i --prompt "$1"
+ ;;
+ esac	
+}
+
+# Get Bang menu
+
+getbangmenu() {
+	printf '%s' "$(getbang $1 | menu 'Search which site? ' | awk '{print $NF}')"
+}
+
+# Get bang url
+
+getbangurl() {
+	printf '%s' "$(jq -r --arg bang_text $2 '.[0:] | .[] | select(.t == $bang_text) | .u' $1)"
+}
+
+# clean Search Terms
+
+cleansearchterms() {
+	printf '%s' "$(echo $1 | tr ' ' '+')"
+}
+
+getresulturl() {
+	a="${1/\{\{\{s\}\}\}/${2}}"
+	printf '%s' "$(echo $a | sed 's/\"//g')"
+}
+
+launchbrowser() {
+	if [ $1 -eq 1 ]
+	then
+		$2 $3  >/dev/null 2>&1	&& exit
+	else
+		printf "\nResult url is => %s" $3
+	fi
+}
+
+
+if [ $# -eq 0 ]
+  then
+    echo "No arguments supplied"
+	BANG="$(getbangmenu $BANG_FILE_LOCATION)"
+	read -p "Search for: " SEARCH_TERMS
+	SEARCH_TERMS="$(cleansearchterms $SEARCH_TERMS)"
+else
+	INPUT="$@"
+	BANG="$(echo $INPUT | awk '{print $NR}')"	
+    SEARCH_TERMS=`cleansearchterms "$(echo $INPUT | awk '{$1=""; print $0}')"`
+fi
+
+#printf "BANG is %s\n" "$BANG"
+#printf "SEARCH_TERMS are %s\n" "$SEARCH_TERMS"
+BANG_URL="$(getbangurl $BANG_FILE_LOCATION $BANG)"
+#printf "BANG URL is %s\n" "$BANG_URL"
+RESULT_URL="$(getresulturl $BANG_URL $SEARCH_TERMS)"
+launchbrowser "$OPENBROWSER" "$BROWSER" "$RESULT_URL"
