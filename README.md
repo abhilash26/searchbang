@@ -29,13 +29,53 @@ For repeated use it is better to add this script to the bin folder or any folder
 ## Usage
 
 ```
-searchbang
+./searchbang
 ```
 or
 
 ```
-searchbang <bang> <search terms>
+./searchbang <bang> <search terms>
 ```
+
+## Swallowing 
+
+If your DM (Desktop Manager) or WM (Window Manager) has swallow functionality use that.
+
+or use https://github.com/salman-abedin/devour which I personally do. 
+then for BROWSER variable use BROWSER="devour firefox" (if firefox for example)
+
+
+## Customizations
+
+You can decide to not open browser automatically if you desire by setting the OPENBROWSER variable to 0 
+```
+OPENBROWSER=0
+```
+Use your preferred browser binary with custom options as the BROWSER variable 
+For example:  
+```
+BROWSER="brave --incognito"
+```
+I know people has massive love for their own menu system.
+currently this script supports dmenu rofi and fzf
+
+For rofi:
+```
+MENU=1
+```
+
+For dmenu:
+```
+MENU=2
+```
+
+For fzf
+```
+MENU=3
+```
+
 
 A lot of optimizations and UX is needed on this. 
 Please help by creating pull requests.
+
+
