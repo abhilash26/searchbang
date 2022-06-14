@@ -29,10 +29,9 @@ Download this repository or use git clone
 
 ```
 git clone https://github.com/abhilash26/searchbang.git
-```
-
 cd searchbang 
 chmod u+x searchbang
+```
 
 For repeated use it is better to add this script to the bin folder or any folder which exists in PATH variable.
 
