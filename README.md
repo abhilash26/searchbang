@@ -84,3 +84,9 @@ A lot of optimizations and UX is needed on this.
 Please help by creating pull requests.
 
 
+## Constructive criticisms and TODO features courtesy of [Jan69](https://github.com/Jan69)
+1. Handling of -h and/or --help
+2. Support the variables WITH the "command"
+3. Fallback Support from rofi, dwm and fzf
+4. Instead of MENU variable use of menucommand=" and pass arguments to it or such (or stdin) and you're free to make a wrapper for any menu system on the planet
+
