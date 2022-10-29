@@ -14,13 +14,13 @@ MENU=3
 
 # bang file location with all info
 BANG_FILE_URL="https://duckduckgo.com/bang.js"
-CACHE_FILE_LOCATION="~/.cache/searchbang"
+CACHE_FILE_LOCATION="$HOME/.cache/searchbang"
 FILE_NAME="bang.json"
 BANG_FILE_LOCATION="${CACHE_FILE_LOCATION}/${FILE_NAME}"
 
 # GET BANG List from file
 getbang() {
-   printf '%s' "$(jq '.[] | "[\(.c)] \(.d) \(.t)"' $1 | sed 's/\"//g')"
+   printf '%s' "$(jq '.[] | "[\(.c)] \(.d) \(.t)"' "$1" | sed 's/\"//g')"
 }
 
 # Get Desired Menu
@@ -41,32 +41,32 @@ menu() {
 # Get Bang menu
 
 getbangmenu() {
-	printf '%s' "$(getbang $1 | menu 'Search which site? ' | awk '{print $NF}')"
+	printf '%s' "$(getbang "$1" | menu 'Search which site? ' | awk '{print $NF}')"
 }
 
 # Get bang url
 
 getbangurl() {
-	printf '%s' "$(jq -r --arg bang_text $2 '.[0:] | .[] | select(.t == $bang_text) | .u' $1)"
+	printf '%s' "$(jq -r --arg bang_text "$2" '.[0:] | .[] | select(.t == $bang_text) | .u' "$1")"
 }
 
 # clean Search Terms
 
 cleansearchterms() {
-	printf '%s' "$(echo $1 | tr ' ' '+')"
+	printf '%s' "$(echo "$1" | tr ' ' '+')"
 }
 
 getresulturl() {
-	a="${1/\{\{\{s\}\}\}/${2}}"
-	printf '%s' "$(echo $a | sed 's/\"//g')"
+  REPLACED_TEXT="$(echo "$1" | sed s/\{\{\{s\}\}\}/"$2"/g)"
+	printf '%s' "$(echo "$REPLACED_TEXT" | sed 's/\"//g')"
 }
 
 launchbrowser() {
-	if [ $1 -eq 1 ]
+	if [ "$1" -eq 1 ]
 	then
-		$2 $3  >/dev/null 2>&1	&& exit
+		"$2" "$3" >/dev/null 2>&1	&& exit
 	else
-		printf "\nResult url is => %s" $3
+		printf "\nResult url is => %s" "$3"
 	fi
 }
 
@@ -78,7 +78,7 @@ if test -f "$BANG_FILE_LOCATION"
 then
  printf "Cached Bang File Exists\n"
 else
- printf "\nDownloading Bang File from $BANG_FILE_URL\n"
+ printf "\nDownloading Bang File from %s\n" "$BANG_FILE_URL"
  curl -s "$BANG_FILE_URL" > "$BANG_FILE_LOCATION"
  printf "Bang file downloaded.\n"
 fi
@@ -87,18 +87,19 @@ fi
 if [ $# -eq 0 ]
   then
     echo "No arguments supplied. Using menu to search for sites"
-	BANG="$(getbangmenu $BANG_FILE_LOCATION)"
-	read -p "Search for: " SEARCH_TERMS
-	SEARCH_TERMS="$(cleansearchterms $SEARCH_TERMS)"
+	BANG="$(getbangmenu "$BANG_FILE_LOCATION")"
+  echo "Seach for: "
+	read -r SEARCH_TERMS
+	SEARCH_TERMS="$(cleansearchterms "$SEARCH_TERMS")"
 else
-	INPUT="$@"
-	BANG="$(echo $INPUT | awk '{print $NR}')"	
-    SEARCH_TERMS=`cleansearchterms "$(echo $INPUT | awk '{$1=""; print $0}')"`
+	INPUT="$*"
+	BANG="$(echo "$INPUT" | awk '{print $NR}')"
+  SEARCH_TERMS=$(cleansearchterms "$(echo "$INPUT" | awk '{$1=""; print $0}')")
 fi
 
 #printf "BANG is %s\n" "$BANG"
 #printf "SEARCH_TERMS are %s\n" "$SEARCH_TERMS"
-BANG_URL="$(getbangurl $BANG_FILE_LOCATION $BANG)"
+BANG_URL="$(getbangurl "$BANG_FILE_LOCATION" "$BANG")"
 #printf "BANG URL is %s\n" "$BANG_URL"
-RESULT_URL="$(getresulturl $BANG_URL $SEARCH_TERMS)"
+RESULT_URL="$(getresulturl "$BANG_URL" "$SEARCH_TERMS")"
 launchbrowser "$OPENBROWSER" "$BROWSER" "$RESULT_URL"
