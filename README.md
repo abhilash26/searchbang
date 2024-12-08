@@ -2,6 +2,8 @@
 
 Search the web without search engines
 
+https://github.com/user-attachments/assets/327f0e87-3328-457e-94cb-85c6baa27e78
+
 My favourite search engine is https://duckduckgo.com. 
 Other than its privacy it comes with an amazing feature of "Bangs" where you can redirect to search on the chosen website if we use specific word for it.
 
