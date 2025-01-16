@@ -1,105 +1,121 @@
 #!/bin/sh
 
-#Author: Abhilash26
-#License: GNU Public
+# Author: Abhilash26
+# License: GNU Public
 
-# Should the script try to open browser with the link?
+# Default settings
 OPENBROWSER=1
-# devour is my personal window swallower program
 BROWSER="firefox"
+menucommand="fzf --height=10 --prompt"
 
-# Use rofi dmenu or fzf as menu
-# accepts  1 for "rofi" or 2 for "dmenu" 3 for "fzf"
-MENU=3
-
-# bang file location with all info
+# Bang file location with all info
 BANG_FILE_URL="https://duckduckgo.com/bang.js"
 CACHE_FILE_LOCATION="$HOME/.cache/searchbang"
 FILE_NAME="bang.json"
 BANG_FILE_LOCATION="${CACHE_FILE_LOCATION}/${FILE_NAME}"
 
-# GET BANG List from file
-getbang() {
-   printf '%s' "$(jq '.[] | "[\(.c)] \(.d) \(.t)"' "$1" | sed 's/\"//g')"
+# Display help message
+show_help() {
+    echo "Usage: $(basename "$0") [options] [bang] [search terms]"
+    echo "Options:"
+    echo "  -h, --help         Show this help message"
+    echo "  -o, --openbrowser  Enable or disable opening the browser (1 or 0, default: 1)"
+    echo "  -b, --browser      Specify the browser to use (default: firefox)"
+    echo "  -m, --menucommand  Specify the menu command (default: fzf)"
+    echo "  [bang] [terms]     Search directly by specifying bang and terms"
+    echo "If no arguments are supplied, a menu will be used to select the site and terms."
+    exit 0
 }
 
-# Get Desired Menu
+# Parse command-line arguments
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            show_help
+            ;;
+        -o|--openbrowser)
+            OPENBROWSER="$2"
+            shift 2
+            ;;
+        -b|--browser)
+            BROWSER="$2"
+            shift 2
+            ;;
+        -m|--menucommand)
+            menucommand="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+# GET BANG List from file
+getbang() {
+   jq -r '.[] | "[\(.c)] \(.d) \(.t)"' "$1"
+}
+
+# Menu wrapper: dynamically uses menucommand
 menu() {
- case $MENU in
- 1)
- 	rofi -dmenu -l 10 -p "$1"
- ;;
- 2)
- 	dmenu -l 10 -p "$1"
- ;;
- 3)
-    fzf -i --prompt "$1"
- ;;
- esac	
+    eval "$menucommand '$1'"
 }
 
 # Get Bang menu
-
 getbangmenu() {
-	printf '%s' "$(getbang "$1" | menu 'Search which site? ' | awk '{print $NF}')"
+    getbang "$1" | menu "Search which site?" | awk '{print $NF}'
 }
 
 # Get bang url
-
 getbangurl() {
-	printf '%s' "$(jq -r --arg bang_text "$2" '.[0:] | .[] | select(.t == $bang_text) | .u' "$1")"
+    jq -r --arg bang_text "$2" '.[0:] | .[] | select(.t == $bang_text) | .u' "$1"
 }
 
-# clean Search Terms
-
+# Clean search terms
 cleansearchterms() {
-	printf '%s' "$(echo "$1" | tr ' ' '+')"
+    echo "$1" | tr ' ' '+'
 }
 
+# Build result URL
 getresulturl() {
-  REPLACED_TEXT="$(echo "$1" | sed s/\{\{\{s\}\}\}/"$2"/g)"
-	printf '%s' "$(echo "$REPLACED_TEXT" | sed 's/\"//g')"
+    echo "$1" | sed "s/\{\{\{s\}\}\}/$2/g" | tr -d '"'
 }
 
+# Launch browser or print URL
 launchbrowser() {
-	if [ "$1" -eq 1 ]
-	then
-		"$2" "$3" >/dev/null 2>&1	&& exit
-	else
-		printf "\nResult url is => %s" "$3"
-	fi
+    if [ "$1" -eq 1 ]; then
+        "$2" "$3" >/dev/null 2>&1 && exit
+    else
+        echo "\nResult URL: $3"
+    fi
 }
 
-
-# Create the directory if not already made.
+# Create cache directory
 mkdir -p "$CACHE_FILE_LOCATION"
 
-if test -f "$BANG_FILE_LOCATION" 	
-then
- printf "Cached Bang File Exists\n"
+# Download bang file if not cached
+if [ ! -f "$BANG_FILE_LOCATION" ]; then
+    echo "Downloading Bang file from $BANG_FILE_URL..."
+    curl -s "$BANG_FILE_URL" -o "$BANG_FILE_LOCATION" || { echo "Failed to download bang file."; exit 1; }
+    echo "Bang file downloaded."
 else
- printf "\nDownloading Bang File from %s\n" "$BANG_FILE_URL"
- curl -s "$BANG_FILE_URL" > "$BANG_FILE_LOCATION"
- printf "Bang file downloaded.\n"
+    echo "Cached Bang file exists."
 fi
 
-
-if [ $# -eq 0 ]
-  then
-    echo "No arguments supplied. Using menu to search for sites"
-	BANG="$(getbangmenu "$BANG_FILE_LOCATION")"
-  echo "Seach for: "
-	read -r SEARCH_TERMS
-	SEARCH_TERMS="$(cleansearchterms "$SEARCH_TERMS")"
+# Main script logic
+if [ $# -eq 0 ]; then
+    echo "No arguments supplied. Using menu to search for sites."
+    BANG="$(getbangmenu "$BANG_FILE_LOCATION")"
+    echo "Search for: "
+    read -r SEARCH_TERMS
+    SEARCH_TERMS="$(cleansearchterms "$SEARCH_TERMS")"
 else
-	INPUT="$*"
-	BANG="$(echo "$INPUT" | awk '{print $NR}')"
-  SEARCH_TERMS=$(cleansearchterms "$(echo "$INPUT" | awk '{$1=""; print $0}')")
+    BANG="$1"
+    shift
+    SEARCH_TERMS="$(cleansearchterms "$*)"
 fi
 
-#printf "BANG is %s\n" "$BANG"
-#printf "SEARCH_TERMS are %s\n" "$SEARCH_TERMS"
+# Process and launch
 BANG_URL="$(getbangurl "$BANG_FILE_LOCATION" "$BANG")"
-#printf "BANG URL is %s\n" "$BANG_URL"
 RESULT_URL="$(getresulturl "$BANG_URL" "$SEARCH_TERMS")"
 launchbrowser "$OPENBROWSER" "$BROWSER" "$RESULT_URL"
